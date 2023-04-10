@@ -9,6 +9,8 @@ import com.nimbusds.jose.proc.SecurityContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.ProviderManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
@@ -29,32 +31,46 @@ import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
 @EnableWebSecurity
-@EnableGlobalMethodSecurity(prePostEnabled = true)
+@EnableGlobalMethodSecurity(prePostEnabled = true) // @PreAuthorize("hasAuthority('SCOPE_ADMIN')")
 public class SecurityConfiguration {
 
     private RsakeysConfig rsakeysConfig;
+    private PasswordEncoder passwordEncoder;
 
-    public SecurityConfiguration(RsakeysConfig rsakeysConfig) {
+    public SecurityConfiguration(RsakeysConfig rsakeysConfig, PasswordEncoder passwordEncoder) {
         this.rsakeysConfig = rsakeysConfig;
+        this.passwordEncoder = passwordEncoder;
     }
 
+
+
+    // pas recommandé
+//    @Bean
+//    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
+//        return authenticationConfiguration.getAuthenticationManager();
+//    }
+
+
+    // Authentification personnalisé : username et password
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
-        return authenticationConfiguration.getAuthenticationManager();
+    public AuthenticationManager authenticationManager(UserDetailsService userDetailsService){ // UserDetailsService inMemoryUserDetailsManager()
+        var authProvider = new DaoAuthenticationProvider();
+        authProvider.setPasswordEncoder(passwordEncoder);
+        authProvider.setUserDetailsService(userDetailsService);
+        return new ProviderManager(authProvider);
     }
-
 
 
     @Bean
     public UserDetailsService inMemoryUserDetailsManager(){
         return new InMemoryUserDetailsManager(
-//                User.withUsername("user1").password(passwordEncoder.encode("1234")).authorities("USER").build(),
-//                User.withUsername("user2").password(passwordEncoder.encode("1234")).authorities("USER").build(),
-//                User.withUsername("admin").password(passwordEncoder.encode("1234")).authorities("USER","ADMIN").build()
+//                User.withUsername("user1").password("{noop}1234").authorities("USER").build(),
+//                User.withUsername("user2").password("{noop}1234").authorities("USER").build(),
+//                User.withUsername("admin").password("{noop}1234").authorities("USER","ADMIN").build()
 
-                User.withUsername("user1").password("{noop}1234").authorities("USER").build(),
-                User.withUsername("user2").password("{noop}1234").authorities("USER").build(),
-                User.withUsername("admin").password("{noop}1234").authorities("USER","ADMIN").build()
+                User.withUsername("user1").password(passwordEncoder.encode("1234")).authorities("USER").build(),
+                User.withUsername("user2").password(passwordEncoder.encode("1234")).authorities("USER").build(),
+                User.withUsername("admin").password(passwordEncoder.encode("1234")).authorities("USER","ADMIN").build()
         );
     }
 
@@ -62,7 +78,7 @@ public class SecurityConfiguration {
     public SecurityFilterChain filterChain(HttpSecurity httpSecurity) throws Exception {
         return httpSecurity
                 .csrf(csrf->csrf.disable())
-//                .authorizeRequests(auth->auth.antMatchers("/token/**").permitAll())
+                .authorizeRequests(auth->auth.requestMatchers("/token/**").permitAll())
                 .authorizeRequests(auth->auth.anyRequest().authenticated())
                 .sessionManagement(sess->sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .oauth2ResourceServer(OAuth2ResourceServerConfigurer::jwt)

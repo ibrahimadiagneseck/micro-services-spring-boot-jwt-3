@@ -12,7 +12,7 @@ import java.util.Map;
 public class TestRestAPI {
 
     @GetMapping("/dataTest")
-//    @PreAuthorize("hasAuthority('SCOPE_USER')")
+    @PreAuthorize("hasAuthority('SCOPE_USER')")
     public Map<String, Object> dataTest(Authentication authentication){
         return Map.of(
                 "message","Data test",
@@ -22,8 +22,8 @@ public class TestRestAPI {
     }
 
     @PostMapping("/saveData")
-//    @PreAuthorize("hasAuthority('SCOPE_ADMIN')")
+    @PreAuthorize("hasAuthority('SCOPE_ADMIN')")
     public Map<String, String> saveData(String data){
-        return Map.of("dataSaved",data);
+        return Map.of("dataSaved", data);
     }
 }
